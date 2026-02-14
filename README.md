@@ -4,6 +4,11 @@
 Rabbithole-style tunnel effects. It is not realtime; it renders frames and
 produces an `.mp4` containing both visuals and the input audio.
 
+## Examples
+
+* [Country](https://www.youtube.com/watch?v=abAwojOvsqY)
+* [Trance](https://www.youtube.com/embed/dOfkiYO1I18)
+
 ## Requirements
 
 - `ffmpeg`
