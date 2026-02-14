@@ -1,6 +1,6 @@
-# Badgerhole
+# The Badgerhole
 
-`badgerhole` creates an offline music visualisation inspired by Sonique's
+`badgerhole.py` creates an offline music visualisation inspired by Sonique's
 Rabbithole-style tunnel effects. It is not realtime; it renders frames and
 produces an `.mp4` containing both visuals and the input audio.
 
@@ -8,6 +8,8 @@ produces an `.mp4` containing both visuals and the input audio.
 
 * [Country](https://www.youtube.com/watch?v=abAwojOvsqY)
 * [Trance](https://www.youtube.com/embed/dOfkiYO1I18)
+
+![Example tunnel visualisation](example.webp)
 
 ## Requirements
 
