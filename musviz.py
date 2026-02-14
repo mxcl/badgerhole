@@ -222,12 +222,15 @@ def render_frame(
     time_scale = 0.38 + bass * 0.28 + beat * 0.18
     tt = t * time_scale
 
-    wobble = 0.045 * np.sin(angle * 2.2 + tt * (0.5 + bass * 1.0))
+    # Keep angular multipliers integer to avoid a branch-cut seam at angle ~= +/-pi.
+    wobble = 0.030 * np.sin(angle * 2.0 + tt * (0.5 + bass * 1.0))
+    wobble += 0.015 * np.sin(angle * 4.0 - tt * (0.3 + bass * 0.8))
     depth = 1.0 / (radius + 0.42 + wobble)
 
     twist = angle + depth * (0.20 + bass * 2.6) + tt * (0.35 + bass * 0.9)
     rings = np.sin(depth * (10.0 + bass * 22.0) - tt * (2.3 + bass * 1.3))
-    spokes = np.sin(twist * (6.0 + high * 10.0 + bass * 7.0))
+    spoke_lobes = int(round(8.0 + high * 8.0 + bass * 8.0))
+    spokes = np.sin(twist * max(3, spoke_lobes))
 
     drift = np.sin(tt * 0.45)
     ripples = np.sin(
@@ -235,8 +238,9 @@ def render_frame(
         + tt * (0.9 + bass * 1.8)
     )
 
-    pattern = 0.40 + 0.40 * rings + 0.15 * spokes + 0.11 * ripples
-    pattern += 0.20 * np.sin(depth * 2.0 - tt * 1.1 + beat * 9.0 + bass * 6.0)
+    fine = np.sin(depth * (22.0 + bass * 18.0) + twist * 1.7 - tt * (0.8 + beat * 1.2))
+    pattern = 0.35 + 0.42 * rings + 0.17 * spokes + 0.09 * ripples + 0.10 * fine
+    pattern += 0.18 * np.sin(depth * 2.0 - tt * 1.1 + beat * 9.0 + bass * 6.0)
     pattern = np.clip(pattern, 0.0, 1.0)
 
     hue = (
@@ -254,22 +258,24 @@ def render_frame(
 
     val = pattern * (0.48 + bass * 0.70 + energy * 0.14) + 0.35 * beat + 0.22 * bass
     val = val * center_gate * vignette
-    glow = np.power(np.clip(pattern - 0.74, 0.0, 1.0), 2.0) * (0.12 + beat * 0.45 + bass * 0.20)
+    glow = np.power(np.clip(pattern - 0.80, 0.0, 1.0), 2.0) * (0.06 + beat * 0.22 + bass * 0.10)
     edge_detail = np.power(np.clip(np.abs(spokes), 0.0, 1.0), 1.35) * (
-        0.14 + bass * 0.14 + beat * 0.10
+        0.22 + bass * 0.16 + beat * 0.12
     )
     val = np.clip(val + glow + edge_detail, 0.0, 1.0)
-    val = np.clip((val - 0.5) * 1.32 + 0.5, 0.0, 1.0)
+    val = np.clip((val - 0.5) * 1.44 + 0.5, 0.0, 1.0)
 
     rgb = hsv_to_rgb(hue.astype(np.float32), sat.astype(np.float32), val.astype(np.float32))
+    # Non-wrapping blur avoids edge wrap artifacts while preserving global sharpness.
+    padded = np.pad(rgb, ((1, 1), (1, 1), (0, 0)), mode="edge")
     blur = (
-        rgb
-        + np.roll(rgb, 1, axis=0)
-        + np.roll(rgb, -1, axis=0)
-        + np.roll(rgb, 1, axis=1)
-        + np.roll(rgb, -1, axis=1)
+        padded[1:-1, 1:-1]
+        + padded[:-2, 1:-1]
+        + padded[2:, 1:-1]
+        + padded[1:-1, :-2]
+        + padded[1:-1, 2:]
     ) / 5.0
-    sharp_amount = 0.78 + 0.18 * beat + 0.10 * bass
+    sharp_amount = 1.06 + 0.18 * beat + 0.10 * bass
     rgb = np.clip(rgb + sharp_amount * (rgb - blur), 0.0, 1.0)
     return (np.clip(rgb, 0.0, 1.0) * 255.0).astype(np.uint8)
 
