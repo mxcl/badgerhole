@@ -17,6 +17,15 @@ If tools are missing, install with `brewx` or run them via `pkgx`.
 ./musviz.py input.mp3 output.mp4
 ```
 
+Hip-hop tuned mode:
+
+```sh
+./musviz.py "Forces Join (Hip Hop).mp3" out.mp4 --mode hiphop
+```
+
+`--mode auto` is the default and picks `hiphop` when the input filename contains
+`hip hop`, `hip-hop`, or `hiphop`; otherwise it uses `rabbithole`.
+
 Optional quality/performance settings:
 
 ```sh
@@ -36,4 +45,9 @@ Faster draft render:
 - Output is H.264 video + AAC audio in an MP4 container.
 - Visuals react to per-frame RMS, onset energy, and low/mid/high frequency
   bands extracted from the track.
+- Project code is split across `src/musviz/`:
+  - `cli.py` argument parsing and render loop
+  - `audio.py` audio decode and feature extraction
+  - `render.py` frame generation for each mode
+  - `encode.py` ffmpeg output pipeline
 - Rendering time depends on resolution, FPS, and track length.
