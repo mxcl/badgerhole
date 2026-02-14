@@ -228,7 +228,7 @@ def render_frame(
         + tt * (0.9 + bass * 1.8)
     )
 
-    pattern = 0.42 + 0.38 * rings + 0.12 * spokes + 0.12 * ripples
+    pattern = 0.40 + 0.40 * rings + 0.15 * spokes + 0.11 * ripples
     pattern += 0.20 * np.sin(depth * 2.0 - tt * 1.1 + beat * 9.0 + bass * 6.0)
     pattern = np.clip(pattern, 0.0, 1.0)
 
@@ -240,17 +240,27 @@ def render_frame(
         + bass * 0.04
     ) % 1.0
 
-    sat = np.clip(0.60 + 0.15 * np.abs(spokes) + bass * 0.24 + high * 0.10, 0.0, 1.0)
+    sat = np.clip(0.58 + 0.18 * np.abs(spokes) + bass * 0.24 + high * 0.10, 0.0, 1.0)
 
     center_radius = 0.22 + bass * 0.12 + beat * 0.08
     center_gate = np.clip((radius - center_radius) / 0.12, 0.0, 1.0)
 
-    val = pattern * (0.50 + bass * 0.65 + energy * 0.15) + 0.36 * beat + 0.18 * bass
+    val = pattern * (0.48 + bass * 0.70 + energy * 0.14) + 0.35 * beat + 0.22 * bass
     val = val * center_gate * vignette
-    glow = np.power(np.clip(pattern - 0.68, 0.0, 1.0), 2.0) * (0.2 + beat * 0.7 + bass * 0.25)
-    val = np.clip(val + glow, 0.0, 1.0)
+    glow = np.power(np.clip(pattern - 0.74, 0.0, 1.0), 2.0) * (0.12 + beat * 0.45 + bass * 0.20)
+    edge_detail = np.power(np.clip(np.abs(spokes), 0.0, 1.0), 1.4) * (0.08 + bass * 0.18)
+    val = np.clip(val + glow + edge_detail, 0.0, 1.0)
+    val = np.clip((val - 0.5) * 1.28 + 0.5, 0.0, 1.0)
 
     rgb = hsv_to_rgb(hue.astype(np.float32), sat.astype(np.float32), val.astype(np.float32))
+    blur = (
+        rgb
+        + np.roll(rgb, 1, axis=0)
+        + np.roll(rgb, -1, axis=0)
+        + np.roll(rgb, 1, axis=1)
+        + np.roll(rgb, -1, axis=1)
+    ) / 5.0
+    rgb = np.clip(rgb + 0.72 * (rgb - blur), 0.0, 1.0)
     return (np.clip(rgb, 0.0, 1.0) * 255.0).astype(np.uint8)
 
 
@@ -363,7 +373,10 @@ def main() -> None:
                 mid=float(features["mid"][i]),
                 high=float(features["high"][i]),
             )
-            encoder.stdin.write(frame.tobytes())
+            try:
+                encoder.stdin.write(frame.tobytes())
+            except BrokenPipeError:
+                break
 
             if i % max(1, args.fps) == 0 or i + 1 == n_frames:
                 pct = ((i + 1) / n_frames) * 100.0
