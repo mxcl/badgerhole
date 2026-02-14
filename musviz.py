@@ -103,6 +103,11 @@ def robust_normalize(values: np.ndarray) -> np.ndarray:
     return np.clip((values - lo) / scale, 0.0, 1.0).astype(np.float32)
 
 
+def lift_levels(values: np.ndarray, floor: float, gamma: float) -> np.ndarray:
+    lifted = floor + (1.0 - floor) * np.power(np.clip(values, 0.0, 1.0), gamma)
+    return np.clip(lifted, 0.0, 1.0).astype(np.float32)
+
+
 def extract_features(audio: np.ndarray, sample_rate: int, fps: int) -> dict[str, np.ndarray]:
     frame_samples = max(1, int(sample_rate / fps))
     n_frames = int(math.ceil(audio.size / frame_samples))
@@ -152,6 +157,8 @@ def extract_features(audio: np.ndarray, sample_rate: int, fps: int) -> dict[str,
     kick = robust_normalize(moving_average(low_onset, max(2, fps // 10)))
     beat = robust_normalize(0.35 * beat + 0.65 * kick)
     bass = robust_normalize(0.75 * low + 0.55 * kick)
+    beat = lift_levels(beat, floor=0.08, gamma=0.82)
+    bass = lift_levels(bass, floor=0.10, gamma=0.80)
 
     return {
         "energy": energy,
@@ -248,9 +255,11 @@ def render_frame(
     val = pattern * (0.48 + bass * 0.70 + energy * 0.14) + 0.35 * beat + 0.22 * bass
     val = val * center_gate * vignette
     glow = np.power(np.clip(pattern - 0.74, 0.0, 1.0), 2.0) * (0.12 + beat * 0.45 + bass * 0.20)
-    edge_detail = np.power(np.clip(np.abs(spokes), 0.0, 1.0), 1.4) * (0.08 + bass * 0.18)
+    edge_detail = np.power(np.clip(np.abs(spokes), 0.0, 1.0), 1.35) * (
+        0.14 + bass * 0.14 + beat * 0.10
+    )
     val = np.clip(val + glow + edge_detail, 0.0, 1.0)
-    val = np.clip((val - 0.5) * 1.28 + 0.5, 0.0, 1.0)
+    val = np.clip((val - 0.5) * 1.32 + 0.5, 0.0, 1.0)
 
     rgb = hsv_to_rgb(hue.astype(np.float32), sat.astype(np.float32), val.astype(np.float32))
     blur = (
@@ -260,7 +269,8 @@ def render_frame(
         + np.roll(rgb, 1, axis=1)
         + np.roll(rgb, -1, axis=1)
     ) / 5.0
-    rgb = np.clip(rgb + 0.72 * (rgb - blur), 0.0, 1.0)
+    sharp_amount = 0.78 + 0.18 * beat + 0.10 * bass
+    rgb = np.clip(rgb + sharp_amount * (rgb - blur), 0.0, 1.0)
     return (np.clip(rgb, 0.0, 1.0) * 255.0).astype(np.uint8)
 
 
