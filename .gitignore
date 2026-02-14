@@ -1,0 +1,8 @@
+# Generated media in this repo root
+/*.mp3
+/*.mp4
+
+# Python caches
+__pycache__/
+**/__pycache__/
+*.py[cod]

@@ -5,9 +5,9 @@ import shutil
 import sys
 from pathlib import Path
 
-from musviz.audio import decode_audio_mono_f32, extract_features
-from musviz.encode import start_encoder
-from musviz.render import build_grid, render_frame
+from badgerhole.audio import decode_audio_mono_f32, extract_features
+from badgerhole.encode import start_encoder
+from badgerhole.render import build_grid, render_frame
 
 
 def parse_args() -> argparse.Namespace:
